@@ -1,7 +1,6 @@
 import mongoose from 'mongoose';
-import db from '../database/database.js';
 
-const AuctionModel = db.model('auctions', new mongoose.Schema({
+const AuctionModel = mongoose.model('auctions', new mongoose.Schema({
     _id: String,
     id_user: String,
     id_card: String,
