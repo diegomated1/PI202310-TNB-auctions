@@ -43,16 +43,16 @@ class App{
 
     start(){
         this.io.on('connection', (socket)=>{
-            console.log("conectado");
+            const {id_auction} = socket.handshake.query;
+            if(id_auction){
+                socket.join(`auction:${id_auction}`);
+            }else{
+                socket.join('auctions');
+            }
             new AuctionListeners(this.io, socket);
-            socket.on('disconnect', () => {
-                console.log('WebSocket connection closed');
-            }); 
         });
 
-        this.server.listen(3000, ()=>{
-            console.log("Server on port 3000");
-        });
+        this.server.listen(parseInt(process.env.API_PORT||'3000'));
     }
 
 }

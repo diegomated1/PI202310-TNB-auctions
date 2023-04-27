@@ -3,18 +3,7 @@ import { Server, Socket } from "socket.io";
 import ui from 'uniqid';
 
 import AuctionModel from "../models/auction.models.js";
-
-/*
-
-#GET     /auction/cards
-#POST    /auction/cards
-
-#DELETE  /auction/cards/:id_card
-#GET     /auction/cards/:id_card/auctions
-#POST    /auction/cards/:id_card/auctions
-#DELETE  /auction/cards/:id_card/auctions
-
-*/
+import IBId from "../interfaces/IBid";
 
 export default class AuctionListeners{
     io: Server;
@@ -26,7 +15,7 @@ export default class AuctionListeners{
         this.listeners();
     }
 
-    private async createAuction(auction:IAuction){
+    private createAuction = async (auction:IAuction)=>{
         try{
             const _auction = await AuctionModel.create({
                 _id: ui.process(),
@@ -34,56 +23,59 @@ export default class AuctionListeners{
                 id_card: auction.id_card,
                 created: new Date(),
                 time: auction.time,
-                bidders: [],
+                bids: [],
                 min_coins: auction.min_coins,
                 insta_win: auction.insta_win
             });
-            this.io.emit('post:auctions', _auction);
+            this.socket.emit('create:auction', _auction);
+            this.io.to('auctions').emit('create:auction', _auction);
         }catch(error){
             //this.socket.emit('post:auctions');
         }
     }
 
-    private async deleteAuction(id_auction:string){
+    private deleteAuction = async (id_auction:string)=>{
         try{
             await AuctionModel.findByIdAndDelete(id_auction);
-            this.io.emit('delete:auctions', id_auction);
+            this.io.to(`auction:${id_auction}`).emit('delete:auction', id_auction);
+            this.io.to('auctions').emit('delete:auction', id_auction);
         }catch(error){
             //this.socket.emit('delete:auction');
         }
     }
 
-    private async createBidd(id_auction:string, id_user:string, coins:number, cards:string[]){
+    private createBid = async (id_auction:string, id_user:string, coins:number, cards:string[])=>{
         try{
             const auction = await AuctionModel.findById(id_auction);
             if(auction){
-                const bidd = {id_user, coins, cards, time: new Date()};
-                auction.bidders.push(bidd);
+                const bid:IBId = {id_user, coins, cards, time: new Date()};
+                auction.bids.push(bid);
                 await auction.save();
-                this.io.emit('post:auctions:bidd', id_auction, bidd);
+                this.io.to(`auction:${id_auction}`).emit('create:bid', id_auction, bid);
             }
         }catch(error){
             //this.socket.emit('post:auctions:bidd');
         }
     }
 
-    private async deleteBidd(id_auction:string, id_user:string){
+    private deleteBid = async (id_auction:string, id_user:string)=>{
         try{
             await AuctionModel.updateOne(
                 { _id: id_auction },
-                { $pull: { bidders: { id_user } } }
+                { $pull: { bids: { id_user } } }
             );
-            this.io.emit('delete:auctions:bidd', id_auction, id_user);
+            this.io.to(`auction:${id_auction}`).emit('delete:bid', id_auction, id_user);
+            //this.io.to('auctions').emit('delete:bid', id_auction, id_user);
         }catch(error){
             //this.socket.emit('delete:auctions:bidd');
         }
     }
 
     listeners(){
-        this.socket.on('post:auctions', this.createAuction);
-        this.socket.on('delete:auctions', this.deleteAuction);
-        this.socket.on('post:auctions:bidd', this.createBidd);
-        this.socket.on('delete:auctions:bidd', this.deleteBidd);
+        this.socket.on('create:auction', this.createAuction);
+        this.socket.on('delete:auction', this.deleteAuction);
+        this.socket.on('create:bid', this.createBid);
+        this.socket.on('delete:bid', this.deleteBid);
     }
 
 }

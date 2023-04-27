@@ -7,7 +7,7 @@ const AuctionModel = db.model('auctions', new mongoose.Schema({
     id_card: String,
     created: Date,
     time: Number,
-    bidders: [{
+    bids: [{
         id_user: String,
         coins: Number,
         cards: [String],
